@@ -21,13 +21,22 @@ async def get_llm_response(message: str) -> Optional[str]:
             ]
         }"""
 
+        # Split the history into individual messages if it contains multiple lines
+        messages = [{"role": "system", "content": system_prompt}]
+
+        # Process the message/history string
+        for line in message.split("\n"):
+            if line.startswith("user: "):
+                messages.append({"role": "user", "content": line[6:]})
+            elif line.startswith("agent: "):
+                messages.append({"role": "assistant", "content": line[7:]})
+            elif line:  # If it's not empty and doesn't have a prefix
+                messages.append({"role": "user", "content": line})
+
         response = await client.chat.completions.create(
             model=os.getenv("OPENAI_MODEL_NAME", "gpt-3.5-turbo"),
             response_format={"type": "json_object"},
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": message},
-            ],
+            messages=messages,
         )
 
         return response.choices[0].message.content

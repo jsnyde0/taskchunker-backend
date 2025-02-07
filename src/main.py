@@ -1,10 +1,12 @@
-from typing import List
+import json
+from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from src.services.llm import get_llm_response
+from src.services.memory import add_message, get_history, start_conversation
 
 app = FastAPI(title="TaskChunker API")
 
@@ -20,6 +22,7 @@ app.add_middleware(
 
 class MessageRequest(BaseModel):
     message: str
+    conversation_id: Optional[str] = None
 
 
 class NextAction(BaseModel):
@@ -28,16 +31,35 @@ class NextAction(BaseModel):
 
 class MessageResponse(BaseModel):
     next_actions: List[NextAction]
+    conversation_id: str
 
 
 @app.post("/api/v1/chat", response_model=MessageResponse)
 async def chat_with_llm(request: MessageRequest):
     """Send a message to the LLM and get a response."""
-    response = await get_llm_response(request.message)
+    # Initiate or continue an existing conversation.
+    if not request.conversation_id:
+        conv_id = start_conversation()
+    else:
+        conv_id = request.conversation_id
+
+    # Append the user's message.
+    add_message(conv_id, "user", request.message)
+
+    # Build the full history to include previous context.
+    history = get_history(conv_id)
+
+    # Pass the full conversation history to the LLM.
+    response = await get_llm_response(history)
     if response is None:
         raise HTTPException(status_code=500, detail="Failed to get LLM response")
+
     try:
-        return MessageResponse.model_validate_json(response)
+        # Parse the JSON response and add the conversation_id
+        json_response = json.loads(response)
+        json_response["conversation_id"] = conv_id
+
+        return MessageResponse.model_validate(json_response)
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to parse LLM response: {str(e)}"
