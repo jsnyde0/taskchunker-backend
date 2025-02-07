@@ -1,3 +1,5 @@
+from typing import List
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -20,8 +22,12 @@ class MessageRequest(BaseModel):
     message: str
 
 
+class NextAction(BaseModel):
+    description: str
+
+
 class MessageResponse(BaseModel):
-    response: str
+    next_actions: List[NextAction]
 
 
 @app.post("/api/v1/chat", response_model=MessageResponse)
@@ -30,7 +36,12 @@ async def chat_with_llm(request: MessageRequest):
     response = await get_llm_response(request.message)
     if response is None:
         raise HTTPException(status_code=500, detail="Failed to get LLM response")
-    return MessageResponse(response=response)
+    try:
+        return MessageResponse.model_validate_json(response)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to parse LLM response: {str(e)}"
+        ) from e
 
 
 @app.get("/")
