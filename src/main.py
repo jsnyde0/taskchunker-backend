@@ -3,6 +3,7 @@ from typing import List, Optional
 
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from src.services.llm import get_llm_response
@@ -30,7 +31,6 @@ class NextAction(BaseModel):
 
 class MessageResponse(BaseModel):
     next_actions: List[NextAction]
-    conversation_id: str
 
 
 @app.post("/api/v1/chat", response_model=MessageResponse)
@@ -59,11 +59,15 @@ async def chat_with_llm(
         raise HTTPException(status_code=500, detail="Failed to get LLM response")
 
     try:
-        # Parse the JSON response and add the conversation_id
+        # Parse the JSON response
         json_response = json.loads(response)
-        json_response["conversation_id"] = conv_id
 
-        return MessageResponse.model_validate(json_response)
+        # Create the response with headers
+        response = MessageResponse.model_validate(json_response)
+
+        # Add conversation_id to response headers
+        headers = {"X-Conversation-ID": conv_id}
+        return JSONResponse(content=response.model_dump(), headers=headers)
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to parse LLM response: {str(e)}"
