@@ -1,0 +1,41 @@
+[project]
+name = "taskchunker-backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.8",
+    "httpx>=0.28.1",
+    "mypy>=1.15.0",
+    "pre-commit>=4.1.0",
+    "pytest>=8.3.4",
+    "python-dotenv>=1.0.1",
+    "ruff>=0.9.5",
+    "uvicorn>=0.34.0",
+]
+
+[tool.ruff]
+# Basic settings
+line-length = 88
+target-version = "py312"
+
+# Essential rules for your current codebase
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # bugbear
+]
+
+# Directories to ignore
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
