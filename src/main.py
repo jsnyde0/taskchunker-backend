@@ -1,7 +1,7 @@
 import json
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -22,7 +22,6 @@ app.add_middleware(
 
 class MessageRequest(BaseModel):
     message: str
-    conversation_id: Optional[str] = None
 
 
 class NextAction(BaseModel):
@@ -35,13 +34,18 @@ class MessageResponse(BaseModel):
 
 
 @app.post("/api/v1/chat", response_model=MessageResponse)
-async def chat_with_llm(request: MessageRequest):
+async def chat_with_llm(
+    request: MessageRequest,
+    conversation_id: Optional[str] = Header(
+        None, description="Conversation ID for maintaining context"
+    ),
+):
     """Send a message to the LLM and get a response."""
     # Initiate or continue an existing conversation.
-    if not request.conversation_id:
+    if not conversation_id:
         conv_id = start_conversation()
     else:
-        conv_id = request.conversation_id
+        conv_id = conversation_id
 
     # Append the user's message.
     add_message(conv_id, "user", request.message)
