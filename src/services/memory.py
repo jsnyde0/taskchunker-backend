@@ -1,6 +1,8 @@
 import json
 import os
 import uuid
+from datetime import datetime
+from typing import Dict, Optional
 
 import redis
 
@@ -45,3 +47,44 @@ def get_history(conversation_id: str) -> str:
         except Exception:
             history.append(msg)
     return "\n".join(history)
+
+
+def save_task_tree(conversation_id: str, task_tree: Dict) -> None:
+    """Save the task tree to Redis under the conversation."""
+
+    # Convert datetime objects to ISO format strings
+    def convert_datetimes(obj):
+        if isinstance(obj, dict):
+            return {k: convert_datetimes(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [convert_datetimes(item) for item in obj]
+        elif isinstance(obj, datetime):
+            return obj.isoformat()
+        return obj
+
+    task_tree_serializable = convert_datetimes(task_tree)
+    task_tree_str = json.dumps(task_tree_serializable)
+    key = f"task_tree:{conversation_id}"
+    r.set(key, task_tree_str)
+
+
+def get_task_tree(conversation_id: str) -> Optional[Dict]:
+    """Retrieve the task tree for a conversation."""
+    key = f"task_tree:{conversation_id}"
+    task_tree_str = r.get(key)
+    if task_tree_str:
+        return json.loads(task_tree_str)
+    return None
+
+
+def find_task_in_tree(tree: Dict, task_id: str) -> Optional[Dict]:
+    """Recursively find a task in the tree by its ID."""
+    if tree["task"]["id"] == task_id:
+        return tree
+
+    for subtask in tree["subtasks"]:
+        result = find_task_in_tree(subtask, task_id)
+        if result:
+            return result
+
+    return None
