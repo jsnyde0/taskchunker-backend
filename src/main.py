@@ -11,7 +11,6 @@ from pydantic import BaseModel, Field
 from src.services.llm import get_llm_response
 from src.services.memory import (
     add_message,
-    find_task_in_tree,
     get_history,
     get_task_tree,
     save_task_tree,
@@ -123,20 +122,13 @@ async def chunk_task(
 
     # Create or get root task
     if request.task_id:
-        existing_tree = get_task_tree(conv_id)
-        if not existing_tree:
+        task_tree = get_task_tree(conv_id, request.task_id)
+        if not task_tree:
             raise HTTPException(
-                status_code=404,
-                detail=f"No task tree found for conversation: {conv_id}",
+                status_code=404, detail=f"Task tree not found: {request.task_id}"
             )
 
-        task_node = find_task_in_tree(existing_tree["tree"], request.task_id)
-        if not task_node:
-            raise HTTPException(
-                status_code=404, detail=f"Task not found: {request.task_id}"
-            )
-
-        root_task = Task.model_validate(task_node["task"])
+        root_task = Task.model_validate(task_tree["task"])
     else:
         root_task = Task(
             id=str(uuid.uuid4()),
@@ -144,7 +136,7 @@ async def chunk_task(
             created_at=datetime.utcnow(),
         )
 
-    # Create the response using Pydantic models
+    # Create a mock response using Pydantic models
     response = ChunkResponse(
         tree=TaskTree(
             task=root_task,

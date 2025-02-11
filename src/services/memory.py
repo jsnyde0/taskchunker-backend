@@ -68,22 +68,37 @@ def save_task_tree(conversation_id: str, task_tree: Dict) -> None:
     r.set(key, task_tree_str)
 
 
-def get_task_tree(conversation_id: str) -> Optional[Dict]:
-    """Retrieve the task tree for a conversation."""
+def get_task_tree(
+    conversation_id: str, task_id: Optional[str] = None
+) -> Optional[Dict]:
+    """
+    Retrieve a task tree from Redis.
+    If task_id is provided, returns the subtree for that specific task.
+    If task_id is None, returns the entire conversation tree.
+    """
     key = f"task_tree:{conversation_id}"
     task_tree_str = r.get(key)
-    if task_tree_str:
-        return json.loads(task_tree_str)
-    return None
+
+    if not task_tree_str:
+        return None
+
+    full_tree = json.loads(task_tree_str)
+
+    if not task_id:
+        return full_tree
+
+    # Find specific task subtree
+    task_tree = _find_task_in_tree(full_tree["tree"], task_id)
+    return task_tree if task_tree else None
 
 
-def find_task_in_tree(tree: Dict, task_id: str) -> Optional[Dict]:
+def _find_task_in_tree(tree: Dict, task_id: str) -> Optional[Dict]:
     """Recursively find a task in the tree by its ID."""
     if tree["task"]["id"] == task_id:
         return tree
 
     for subtask in tree["subtasks"]:
-        result = find_task_in_tree(subtask, task_id)
+        result = _find_task_in_tree(subtask, task_id)
         if result:
             return result
 
