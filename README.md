@@ -35,6 +35,48 @@ uv run uvicorn src.main:app --reload
 
 The API will be available at `http://localhost:8000/docs`
 
+### 3. Working with Notebooks (Experimental)
+
+To work with Jupyter notebooks (for experiments with CrewAI, etc.):
+
+1. Create a dedicated environment:
+```bash
+uv venv .venv-notebooks
+```
+
+2. Activate the environment:
+```bash
+# On Windows (PowerShell):
+.\.venv-notebooks\Scripts\activate
+
+# On Unix/Mac:
+source .venv-notebooks/bin/activate
+```
+
+3. Install dependencies:
+```bash
+# Install base project dependencies
+uv sync
+
+# Install notebook-specific packages
+uv pip install jupyterlab crewai controlflow ipykernel
+```
+
+4. Choose how to work with notebooks:
+
+**Option A: Using VS Code**
+1. Open VS Code
+2. Create or open a notebook (.ipynb file)
+3. Click the kernel selector in the top-right of the notebook
+4. Select "Python Environments..."
+5. Choose the Python interpreter from `.venv-notebooks`
+
+**Option B: Using Jupyter Lab**
+```bash
+jupyter lab
+```
+Notebooks will be available at `http://localhost:8888`
+
 ## Testing
 
 ```bash
